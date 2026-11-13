@@ -3,6 +3,10 @@ plugins {
     id 'com.android.application'
 }
 
+configurations {
+    natives
+}
+
 android {
     namespace 'com.grandprix.racing'
     compileSdk 35
@@ -19,6 +23,12 @@ android {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
     }
+
+    sourceSets {
+        main {
+            jniLibs.srcDirs = ['libs']
+        }
+    }
 }
 
 dependencies {
@@ -26,5 +36,29 @@ dependencies {
 
     implementation "com.badlogicgames.gdx:gdx-backend-android:${rootProject.ext.gdxVersion}"
 
-    implementation "com.badlogicgames.gdx:gdx-platform:${rootProject.ext.gdxVersion}:natives-arm64-v8a"
+    natives "com.badlogicgames.gdx:gdx-platform:${rootProject.ext.gdxVersion}:natives-arm64-v8a"
+    natives "com.badlogicgames.gdx:gdx-platform:${rootProject.ext.gdxVersion}:natives-armeabi-v7a"
+    natives "com.badlogicgames.gdx:gdx-platform:${rootProject.ext.gdxVersion}:natives-x86"
+    natives "com.badlogicgames.gdx:gdx-platform:${rootProject.ext.gdxVersion}:natives-x86_64"
+}
+
+tasks.register('copyAndroidNatives') {
+    doLast {
+        configurations.natives.each { jar ->
+            def abi = jar.name.replace(
+                'gdx-platform-' + rootProject.ext.gdxVersion + '-natives-',
+                ''
+            ).replace('.jar', '')
+
+            copy {
+                from zipTree(jar)
+                into "libs/${abi}"
+                include '*.so'
+            }
+        }
+    }
+}
+
+tasks.named('preBuild') {
+    dependsOn 'copyAndroidNatives'
 }
